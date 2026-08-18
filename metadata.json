@@ -1,0 +1,6 @@
+{
+  "name": "Custom AI News Aggregator",
+  "description": "A resilient, AI-powered custom RSS news aggregator with Gemini article summarization, topic filtering, and feed diagnostics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
