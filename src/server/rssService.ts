@@ -181,17 +181,29 @@ export async function fetchSingleFeed(feedUrl: string, category: string = 'Gener
       };
     }
 
-    const items: FeedItem[] = (parsedFeed.items || []).map((item, idx) => {
+    const seenLinks = new Set<string>();
+    const items: FeedItem[] = [];
+
+    (parsedFeed.items || []).forEach((item, idx) => {
+      const itemLink = item.link || `${feedUrl}#item-${idx}`;
+      const itemTitle = item.title || 'Untitled';
+      const dedupKey = `${itemLink.trim().toLowerCase()}-${itemTitle.trim().toLowerCase()}`;
+      
+      if (seenLinks.has(dedupKey)) {
+        return; // Skip duplicate item inside feed
+      }
+      seenLinks.add(dedupKey);
+
       const snippet = cleanHtml(item.contentSnippet || item.content || item.summary || '').slice(0, 320);
-      const title = refineHeadline(item.title || 'Untitled', snippet);
+      const title = refineHeadline(itemTitle, snippet);
       const fullContent = cleanHtml(item.content || item.contentSnippet || item.summary || '');
       const pubDate = item.pubDate || item.isoDate || new Date().toISOString();
       const img = extractImage(item);
 
-      return {
-        id: `${feedUrl}-${item.guid || item.id || item.link || idx}`,
+      items.push({
+        id: `${feedUrl}-${item.guid || item.id || itemLink}-${idx}`,
         title,
-        link: item.link || feedUrl,
+        link: itemLink,
         pubDate: item.pubDate ? new Date(item.pubDate).toUTCString() : new Date().toUTCString(),
         isoDate: item.isoDate || new Date(pubDate).toISOString(),
         contentSnippet: snippet,
@@ -201,7 +213,7 @@ export async function fetchSingleFeed(feedUrl: string, category: string = 'Gener
         sourceUrl: feedUrl,
         category,
         imageUrl: img,
-      };
+      });
     });
 
     return {

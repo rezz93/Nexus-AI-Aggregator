@@ -341,8 +341,18 @@ export default function App() {
       );
     }
 
-    // Default: Newest first (chronological)
-    return sourceLimitedStories;
+    // Final deduplication pass to ensure strictly unique stories & React keys
+    const seen = new Set<string>();
+    const finalUnique: StoryItem[] = [];
+    for (const story of sourceLimitedStories) {
+      const dedupKey = `${story.id}-${story.link}`;
+      if (!seen.has(dedupKey)) {
+        seen.add(dedupKey);
+        finalUnique.push(story);
+      }
+    }
+
+    return finalUnique;
   }, [stories, activeCategory, onlyBookmarked, searchQuery, bookmarkedIds, preferences]);
 
   // Calculate status numbers

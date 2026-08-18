@@ -43,14 +43,24 @@ export async function fetchAllFeeds(sources: FeedSource[]): Promise<{
           }
         }
 
+        // Deduplicate stories by ID / link
+        const uniqueStoriesMap = new Map<string, StoryItem>();
+        for (const story of allStories) {
+          const key = story.id || story.link || `${story.title}-${story.pubDate}`;
+          if (!uniqueStoriesMap.has(key)) {
+            uniqueStoriesMap.set(key, story);
+          }
+        }
+        const deduplicatedStories = Array.from(uniqueStoriesMap.values());
+
         // Sort stories descending by publication date
-        allStories.sort((a, b) => {
+        deduplicatedStories.sort((a, b) => {
           const timeA = new Date(a.isoDate || a.pubDate).getTime() || 0;
           const timeB = new Date(b.isoDate || b.pubDate).getTime() || 0;
           return timeB - timeA;
         });
 
-        return { stories: allStories, sourceStatuses };
+        return { stories: deduplicatedStories, sourceStatuses };
       }
     }
   } catch (err) {
@@ -115,13 +125,22 @@ export async function fetchAllFeeds(sources: FeedSource[]): Promise<{
     }
   }
 
-  allStories.sort((a, b) => {
+  const uniqueStoriesMap = new Map<string, StoryItem>();
+  for (const story of allStories) {
+    const key = story.id || story.link || `${story.title}-${story.pubDate}`;
+    if (!uniqueStoriesMap.has(key)) {
+      uniqueStoriesMap.set(key, story);
+    }
+  }
+  const deduplicatedStories = Array.from(uniqueStoriesMap.values());
+
+  deduplicatedStories.sort((a, b) => {
     const timeA = new Date(a.isoDate || a.pubDate).getTime() || 0;
     const timeB = new Date(b.isoDate || b.pubDate).getTime() || 0;
     return timeB - timeA;
   });
 
-  return { stories: allStories, sourceStatuses };
+  return { stories: deduplicatedStories, sourceStatuses };
 }
 
 function parseXmlInBrowser(xmlText: string, source: FeedSource): StoryItem[] {
@@ -131,14 +150,14 @@ function parseXmlInBrowser(xmlText: string, source: FeedSource): StoryItem[] {
 
   return items.map((el, i) => {
     const title = el.querySelector('title')?.textContent || 'Untitled';
-    const link = el.querySelector('link')?.textContent || el.querySelector('link')?.getAttribute('href') || source.url;
+    const link = el.querySelector('link')?.textContent || el.querySelector('link')?.getAttribute('href') || `${source.url}#${i}`;
     const desc = el.querySelector('description, summary, content')?.textContent || '';
     const pubDate = el.querySelector('pubDate, published, updated')?.textContent || new Date().toISOString();
 
     const cleanText = desc.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
     return {
-      id: `${source.id}-${i}-${Date.now()}`,
+      id: `${source.id}-${i}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       title,
       link,
       pubDate: new Date(pubDate).toUTCString(),
